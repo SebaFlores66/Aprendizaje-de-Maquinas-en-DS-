@@ -1,0 +1,41 @@
+pacman::p_load(tidyverse, stringi)# con los :: llamo solo las herramientas del paquete 
+
+# El tidyverse permite ordenar la data
+# El srtingi sirve para utilizar cadenas de texto 
+
+url_data <- "http://dataminingsoccer.com/de/wp-content/downloads/SoccerDataAllWorldCups.csv"
+
+mundiales <- 
+  read.table(url_data, sep=";", header=TRUE) %>%  # Este operadores se conoce como 'pipe' que es decir 'y luego se la entubas a...'
+  mutate(goles_partido = score.A + score.B, #calculo los goles por partido 
+         fase = case_when(stri_detect_regex(which.stage.of.the.turnament,  # simplificar las fases 
+                                            "^final|^semi final|^final round") ~ "finales",
+                          stri_detect_regex(which.stage.of.the.turnament, 
+                                            "third") ~ "3y4",
+                          TRUE ~ "grupos"))
+
+
+
+head(mundiales) 
+
+hist(mundiales$goles_partido)
+
+table(mundiales$which.stage.of.the.turnament, mundiales$fase)
+
+# Agregar el promedio de goles por año y fase 
+fase_agg <-
+  mundiales %>% 
+  group_by(year, fase) %>% 
+  summarise(goles_partido = mean(goles_partido)) %>% drop_na()  #summarise te lo resume como quieras 
+
+
+head(fase_agg)
+
+
+ggplot(fase_agg, aes(x=year, y =goles_partido, col=fase)) + 
+  geom_point() + # agrego puntos
+  geom_smooth(method = 'loess' , formula = 'y ~ x') #agrego linea de tendencia  + 
+  theme_minimal() + # se parezca a una gaussiana
+  xlab("Año del mundial") +
+  ylab("# Goles") + 
+  ggtitle("Promedio de goles por partido segun año y fase de los Mundiales")
